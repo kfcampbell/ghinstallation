@@ -1,4 +1,4 @@
-module github.com/bradleyfalzon/ghinstallation/v2
+module github.com/kfcampbell/ghinstallation
 
 go 1.21
 
