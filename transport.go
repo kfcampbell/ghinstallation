@@ -33,7 +33,8 @@ type Transport struct {
 	BaseURL                  string                           // BaseURL is the scheme and host for GitHub API, defaults to https://api.github.com
 	Client                   Client                           // Client to use to refresh tokens, defaults to http.Client with provided transport
 	tr                       http.RoundTripper                // tr is the underlying roundtripper being wrapped
-	appID                    int64                            // appID is the GitHub App's ID
+	appID                    int64                            // appID is the GitHub App's ID. Deprecated: use clientID instead.
+	clientID                 string                           // clientID is the GitHub App's client ID. This is preferred over App ID, and they are interchangeable.
 	installationID           int64                            // installationID is the GitHub App Installation ID
 	InstallationTokenOptions *github.InstallationTokenOptions // parameters restrict a token's access
 	appsTransport            *AppsTransport
@@ -72,12 +73,22 @@ func (e *HTTPError) Unwrap() error {
 var _ http.RoundTripper = &Transport{}
 
 // NewKeyFromFile returns a Transport using a private key from file.
-func NewKeyFromFile(tr http.RoundTripper, appID, installationID int64, privateKeyFile string) (*Transport, error) {
+func NewKeyFromFile(tr http.RoundTripper, clientID string, installationID int64, privateKeyFile string) (*Transport, error) {
 	privateKey, err := os.ReadFile(privateKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not read private key: %s", err)
 	}
-	return New(tr, appID, installationID, privateKey)
+	return NewTransport(tr, clientID, installationID, privateKey)
+}
+
+// NewKeyFromFileWithAppID returns a Transport using a private key from file when given an appID.
+// Deprecated: use NewKeyFromFile instead.
+func NewKeyFromFileWithAppID(tr http.RoundTripper, appID, installationID int64, privateKeyFile string) (*Transport, error) {
+	privateKey, err := os.ReadFile(privateKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not read private key: %s", err)
+	}
+	return NewTransportFromAppID(tr, appID, installationID, privateKey)
 }
 
 // Client is a HTTP client which sends a http.Request and returns a http.Response
@@ -86,15 +97,33 @@ type Client interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-// New returns an Transport using private key. The key is parsed
+// NewTransport returns an Transport using private key. The key is parsed
 // and if any errors occur the error is non-nil.
 //
 // The provided tr http.RoundTripper should be shared between multiple
 // installations to ensure reuse of underlying TCP connections.
 //
 // The returned Transport's RoundTrip method is safe to be used concurrently.
-func New(tr http.RoundTripper, appID, installationID int64, privateKey []byte) (*Transport, error) {
-	atr, err := NewAppsTransport(tr, appID, privateKey)
+// Deprecated: Use NewTransport instead.
+func NewTransport(tr http.RoundTripper, clientID string, installationID int64, privateKey []byte) (*Transport, error) {
+	atr, err := NewAppsTransport(tr, clientID, privateKey)
+	if err != nil {
+		return nil, err
+	}
+	return NewFromAppsTransport(atr, installationID), nil
+}
+
+// NewTransportFromAppID returns an Transport using private key when given an appID instead of a clientID.
+// Deprecated: Use NewTransport instead.
+// The key is parsed
+// and if any errors occur the error is non-nil.
+//
+// The provided tr http.RoundTripper should be shared between multiple
+// installations to ensure reuse of underlying TCP connections.
+//
+// The returned Transport's RoundTrip method is safe to be used concurrently.
+func NewTransportFromAppID(tr http.RoundTripper, appID, installationID int64, privateKey []byte) (*Transport, error) {
+	atr, err := NewAppsTransportWithAppId(tr, appID, privateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -109,6 +138,7 @@ func NewFromAppsTransport(atr *AppsTransport, installationID int64) *Transport {
 		Client:         &http.Client{Transport: atr.tr},
 		tr:             atr.tr,
 		appID:          atr.appID,
+		clientID:       atr.clientID,
 		installationID: installationID,
 		appsTransport:  atr,
 		mu:             &sync.Mutex{},
@@ -192,8 +222,14 @@ func (t *Transport) Expiry() (expiresAt time.Time, refreshAt time.Time, err erro
 }
 
 // AppID returns the app ID associated with the transport
+// Deprecated: use ClientID instead
 func (t *Transport) AppID() int64 {
 	return t.appID
+}
+
+// ClientID returns the clientID associated with the transport
+func (t *Transport) ClientID() string {
+	return t.clientID
 }
 
 // InstallationID returns the installation ID associated with the transport
