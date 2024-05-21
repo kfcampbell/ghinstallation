@@ -77,7 +77,7 @@ func TestNew(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	tr, err := New(&http.Transport{}, appID, installationID, key)
+	tr, err := NewTransportFromAppID(&http.Transport{}, appID, installationID, key)
 	if err != nil {
 		t.Fatal("unexpected error:", err)
 	}
@@ -142,7 +142,7 @@ func TestNewKeyFromFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = NewKeyFromFile(&http.Transport{}, appID, installationID, tmpfile.Name())
+	_, err = NewKeyFromFileWithAppID(&http.Transport{}, appID, installationID, tmpfile.Name())
 	if err != nil {
 		t.Fatal("unexpected error:", err)
 	}
@@ -164,7 +164,7 @@ func TestNew_appendHeader(t *testing.T) {
 	}
 	req.Header.Add("Accept", myheader)
 
-	tr, err := New(&http.Transport{}, appID, installationID, key)
+	tr, err := NewTransportFromAppID(&http.Transport{}, appID, installationID, key)
 	if err != nil {
 		t.Fatal("unexpected error:", err)
 	}
@@ -259,7 +259,7 @@ func TestRefreshTokenWithParameters(t *testing.T) {
 		},
 	}
 
-	tr, err := New(roundTripper, appID, installationID, key)
+	tr, err := NewTransportFromAppID(roundTripper, appID, installationID, key)
 	if err != nil {
 		t.Fatal("unexpected error:", err)
 	}
@@ -342,7 +342,7 @@ func TestRefreshTokenWithTrailingSlashBaseURL(t *testing.T) {
 		},
 	}
 
-	tr, err := New(roundTripper, appID, installationID, key)
+	tr, err := NewTransportFromAppID(roundTripper, appID, installationID, key)
 	if err != nil {
 		t.Fatal("unexpected error:", err)
 	}
