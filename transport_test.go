@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v61/github"
+	gh "github.com/octokit/go-sdk/pkg/github/models"
 )
 
 const (
@@ -202,12 +202,24 @@ func TestNew_appendHeader(t *testing.T) {
 }
 
 func TestRefreshTokenWithParameters(t *testing.T) {
-	installationTokenOptions := &github.InstallationTokenOptions{
+	parseIssuesPermissions, err := gh.ParseAppPermissions_issues("read")
+	if err != nil {
+		t.Fatalf("error calling ParseAppPermissions_issues: %v", err)
+	}
+	issuesPermissions := parseIssuesPermissions.(*gh.AppPermissions_issues)
+	permissions := gh.NewAppPermissions()
+	permissions.SetIssues(issuesPermissions)
+
+	parseContentsPermissions, err := gh.ParseAppPermissions_contents("write")
+	if err != nil {
+		t.Fatalf("error calling ParseAppPermissions_contents: %v", err)
+	}
+	contentsPermissions := parseContentsPermissions.(*gh.AppPermissions_contents)
+	permissions.SetContents(contentsPermissions)
+
+	installationTokenOptions := &InstallationTokenOptions{
 		RepositoryIDs: []int64{1234},
-		Permissions: &github.InstallationPermissions{
-			Contents: github.String("write"),
-			Issues:   github.String("read"),
-		},
+		Permissions:   permissions,
 	}
 
 	// Convert InstallationTokenOptions into a ReadWriter to pass as an argument to http.NewRequest.
@@ -235,18 +247,32 @@ func TestRefreshTokenWithParameters(t *testing.T) {
 				t.Errorf("HTTP body want->got: %s", diff)
 			}
 
+			repo := gh.NewRepository()
+			var repoID = int32(1234)
+			repo.SetId(&repoID)
+
+			returnedPermissions := gh.NewAppPermissions()
+			parseIssuesPermissions, err := gh.ParseAppPermissions_issues("read")
+			if err != nil {
+				return nil, fmt.Errorf("error calling ParseAppPermissions_issues: %v", err)
+			}
+			returnedIssuesPermissions := parseIssuesPermissions.(*gh.AppPermissions_issues)
+			returnedPermissions.SetIssues(returnedIssuesPermissions)
+			parseReturnedContentsPermissions, err := gh.ParseAppPermissions_contents("write")
+			if err != nil {
+				return nil, fmt.Errorf("error calling ParseAppPermissions_contents: %v", err)
+			}
+			returnedContents := parseReturnedContentsPermissions.(*gh.AppPermissions_contents)
+			returnedPermissions.SetContents(returnedContents)
+
 			// Return acceptable access token.
 			accessToken := accessToken{
-				Token:     "token_string",
-				ExpiresAt: time.Now(),
-				Repositories: []github.Repository{{
-					ID: github.Int64(1234),
-				}},
-				Permissions: github.InstallationPermissions{
-					Contents: github.String("write"),
-					Issues:   github.String("read"),
-				},
+				Token:        "token_string",
+				ExpiresAt:    time.Now(),
+				Repositories: []gh.Repository{*repo},
+				Permissions:  *returnedPermissions,
 			}
+
 			tokenReadWriter, err := GetReadWriter(accessToken)
 			if err != nil {
 				return nil, fmt.Errorf("error converting token into io.ReadWriter: %+v", err)
@@ -275,12 +301,24 @@ func TestRefreshTokenWithParameters(t *testing.T) {
 }
 
 func TestRefreshTokenWithTrailingSlashBaseURL(t *testing.T) {
-	installationTokenOptions := &github.InstallationTokenOptions{
+	parseIssuesPermissions, err := gh.ParseAppPermissions_issues("read")
+	if err != nil {
+		t.Fatalf("error calling ParseAppPermissions_issues: %v", err)
+	}
+	issuesPermissions := parseIssuesPermissions.(*gh.AppPermissions_issues)
+	permissions := gh.NewAppPermissions()
+	permissions.SetIssues(issuesPermissions)
+
+	parseContentsPermissions, err := gh.ParseAppPermissions_contents("write")
+	if err != nil {
+		t.Fatalf("error calling ParseAppPermissions_contents: %v", err)
+	}
+	contentsPermissions := parseContentsPermissions.(*gh.AppPermissions_contents)
+	permissions.SetContents(contentsPermissions)
+
+	installationTokenOptions := &InstallationTokenOptions{
 		RepositoryIDs: []int64{1234},
-		Permissions: &github.InstallationPermissions{
-			Contents: github.String("write"),
-			Issues:   github.String("read"),
-		},
+		Permissions:   permissions,
 	}
 
 	tokenToBe := "token_string"
@@ -318,17 +356,30 @@ func TestRefreshTokenWithTrailingSlashBaseURL(t *testing.T) {
 				t.Errorf("HTTP body want->got: %s", diff)
 			}
 
+			repo := gh.NewRepository()
+			var repoID = int32(1234)
+			repo.SetId(&repoID)
+
+			returnedPermissions := gh.NewAppPermissions()
+			parseIssuesPermissions, err := gh.ParseAppPermissions_issues("read")
+			if err != nil {
+				return nil, fmt.Errorf("error calling ParseAppPermissions_issues: %v", err)
+			}
+			returnedIssuesPermissions := parseIssuesPermissions.(*gh.AppPermissions_issues)
+			returnedPermissions.SetIssues(returnedIssuesPermissions)
+			parseReturnedContentsPermissions, err := gh.ParseAppPermissions_contents("write")
+			if err != nil {
+				return nil, fmt.Errorf("error calling ParseAppPermissions_contents: %v", err)
+			}
+			returnedContents := parseReturnedContentsPermissions.(*gh.AppPermissions_contents)
+			returnedPermissions.SetContents(returnedContents)
+
 			// Return acceptable access token.
 			accessToken := accessToken{
-				Token:     tokenToBe,
-				ExpiresAt: time.Now(),
-				Repositories: []github.Repository{{
-					ID: github.Int64(1234),
-				}},
-				Permissions: github.InstallationPermissions{
-					Contents: github.String("write"),
-					Issues:   github.String("read"),
-				},
+				Token:        tokenToBe,
+				ExpiresAt:    time.Now(),
+				Repositories: []gh.Repository{*repo},
+				Permissions:  *returnedPermissions,
 			}
 			tokenReadWriter, err := GetReadWriter(accessToken)
 			if err != nil {
