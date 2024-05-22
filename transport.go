@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-github/v61/github"
+	gh "github.com/octokit/go-sdk/pkg/github/models"
 )
 
 const (
@@ -30,13 +30,13 @@ const (
 //
 // See https://developer.github.com/apps/building-integrations/setting-up-and-registering-github-apps/about-authentication-options-for-github-apps/
 type Transport struct {
-	BaseURL                  string                           // BaseURL is the scheme and host for GitHub API, defaults to https://api.github.com
-	Client                   Client                           // Client to use to refresh tokens, defaults to http.Client with provided transport
-	tr                       http.RoundTripper                // tr is the underlying roundtripper being wrapped
-	appID                    int64                            // appID is the GitHub App's ID. Deprecated: use clientID instead.
-	clientID                 string                           // clientID is the GitHub App's client ID. This is preferred over App ID, and they are interchangeable.
-	installationID           int64                            // installationID is the GitHub App Installation ID
-	InstallationTokenOptions *github.InstallationTokenOptions // parameters restrict a token's access
+	BaseURL                  string                    // BaseURL is the scheme and host for GitHub API, defaults to https://api.github.com
+	Client                   Client                    // Client to use to refresh tokens, defaults to http.Client with provided transport
+	tr                       http.RoundTripper         // tr is the underlying roundtripper being wrapped
+	appID                    int64                     // appID is the GitHub App's ID. Deprecated: use clientID instead.
+	clientID                 string                    // clientID is the GitHub App's client ID. This is preferred over App ID, and they are interchangeable.
+	installationID           int64                     // installationID is the GitHub App Installation ID
+	InstallationTokenOptions *InstallationTokenOptions // parameters restrict a token's access
 	appsTransport            *AppsTransport
 
 	mu    *sync.Mutex  // mu protects token
@@ -45,10 +45,10 @@ type Transport struct {
 
 // accessToken is an installation access token response from GitHub
 type accessToken struct {
-	Token        string                         `json:"token"`
-	ExpiresAt    time.Time                      `json:"expires_at"`
-	Permissions  github.InstallationPermissions `json:"permissions,omitempty"`
-	Repositories []github.Repository            `json:"repositories,omitempty"`
+	Token        string            `json:"token"`
+	ExpiresAt    time.Time         `json:"expires_at"`
+	Permissions  gh.AppPermissions `json:"permissions,omitempty"`
+	Repositories []gh.Repository   `json:"repositories,omitempty"`
 }
 
 // HTTPError represents a custom error for failing HTTP operations.
@@ -196,15 +196,15 @@ func (t *Transport) Token(ctx context.Context) (string, error) {
 }
 
 // Permissions returns a transport token's GitHub installation permissions.
-func (t *Transport) Permissions() (github.InstallationPermissions, error) {
+func (t *Transport) Permissions() (gh.AppPermissions, error) {
 	if t.token == nil {
-		return github.InstallationPermissions{}, fmt.Errorf("Permissions() = nil, err: nil token")
+		return gh.AppPermissions{}, fmt.Errorf("Permissions() = nil, err: nil token")
 	}
 	return t.token.Permissions, nil
 }
 
 // Repositories returns a transport token's GitHub repositories.
-func (t *Transport) Repositories() ([]github.Repository, error) {
+func (t *Transport) Repositories() ([]gh.Repository, error) {
 	if t.token == nil {
 		return nil, fmt.Errorf("Repositories() = nil, err: nil token")
 	}
