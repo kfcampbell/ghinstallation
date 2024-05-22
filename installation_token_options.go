@@ -5,6 +5,8 @@ import (
 )
 
 // InstallationTokenOptions allow restricting a token's access to specific repositories.
+// These options are taken from google/go-github's implementation.
+// See more at https://github.com/google/go-github/blob/8c1232a5960307a6383998e1aa2dd71711343810/github/apps.go
 type InstallationTokenOptions struct {
 	// The IDs of the repositories that the installation token can access.
 	// Providing repository IDs restricts the access of an installation token to specific repositories.

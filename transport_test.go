@@ -202,7 +202,6 @@ func TestNew_appendHeader(t *testing.T) {
 }
 
 func TestRefreshTokenWithParameters(t *testing.T) {
-
 	parseIssuesPermissions, err := gh.ParseAppPermissions_issues("read")
 	if err != nil {
 		t.Fatalf("error calling ParseAppPermissions_issues: %v", err)
