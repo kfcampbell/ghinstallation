@@ -150,7 +150,7 @@ func (t *AppsTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// while the jwt-go library serializes to fractional timestamps.
 	// Truncate them before passing to jwt-go.
 	iss := time.Now().Add(-30 * time.Second).Truncate(time.Second)
-	exp := iss.Add(2 * time.Minute)
+	exp := iss.Add(10 * time.Minute)
 
 	// prefer clientID when given, fall back to appID when not
 	// TODO(kfcampbell): add test coverage for this behavior
