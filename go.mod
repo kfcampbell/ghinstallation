@@ -5,7 +5,7 @@ go 1.21.5
 toolchain go1.22.3
 
 require (
-	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/go-cmp v0.6.0
 	github.com/octokit/go-sdk v0.0.13
 )
