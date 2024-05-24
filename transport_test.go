@@ -21,7 +21,8 @@ import (
 const (
 	installationID = 1
 	appID          = 2
-	token          = "abc123"
+	clientID       = "clientID"
+	token          = "very-secure-test-token"
 )
 
 var key = []byte(`-----BEGIN RSA PRIVATE KEY-----
@@ -129,6 +130,26 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewKeyFromFile(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name()) // clean up
+
+	if _, err := tmpfile.Write(key); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = NewKeyFromFile(&http.Transport{}, clientID, installationID, tmpfile.Name())
+	if err != nil {
+		t.Fatal("unexpected error:", err)
+	}
+}
+
+func TestNewKeyFromFileWithAppID(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "example")
 	if err != nil {
 		t.Fatal(err)
