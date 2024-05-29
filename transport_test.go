@@ -2,6 +2,7 @@ package ghinstallation
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/google/go-cmp/cmp"
 	gh "github.com/octokit/go-sdk/pkg/github/models"
 )
@@ -53,7 +55,7 @@ rezRkSNbJ8cqt9XQS+NNJ6Xwzl3EbuAt6r8f8VO1TIdRgFOgiUXRVNZ3ZyW8Hegd
 kGTL0A6/0yAu9qQZlFbaD5bWhQo7eyx63u4hZGppBhkTSPikOYUPCH8=
 -----END RSA PRIVATE KEY-----`)
 
-func TestNew(t *testing.T) {
+func TestNewTransportFromAppID(t *testing.T) {
 	var authed bool
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Accept") != acceptHeader {
@@ -169,7 +171,7 @@ func TestNewKeyFromFileWithAppID(t *testing.T) {
 	}
 }
 
-func TestNew_appendHeader(t *testing.T) {
+func TestNewTransportFromAppID_appendHeader(t *testing.T) {
 	var headers http.Header
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headers = r.Header
@@ -468,10 +470,106 @@ func TestRoundTripperContract(t *testing.T) {
 	}
 }
 
+// roundTripperFunc, its receiver RoundTrip, mockRoundTripper, NewBodyReader,
+// mockSigner, and its receiver Sign are used to test the refreshToken method.
 type roundTripperFunc func(*http.Request) (*http.Response, error)
 
 func (fn roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return fn(req)
+}
+
+type mockRoundTripper struct {
+	response *http.Response
+	err      error
+}
+
+func (mrt *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return mrt.response, mrt.err
+}
+
+func NewBodyReader(body interface{}) *strings.Reader {
+	if body == nil {
+		return strings.NewReader("")
+	}
+	jsonBody, _ := json.Marshal(body)
+	return strings.NewReader(string(jsonBody))
+}
+
+type mockSigner struct{}
+
+func (ms *mockSigner) Sign(claims jwt.Claims) (string, error) {
+	return "mocked-signed-token", nil
+}
+
+func TestRefreshTokenNonSuccessfulStatusCode(t *testing.T) {
+	mockResponse := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body:       io.NopCloser(strings.NewReader(`{"message": "Bad Request"}`)),
+		Header:     make(http.Header),
+	}
+
+	tr := &Transport{
+		BaseURL:        "https://api.github.com",
+		Client:         &http.Client{Transport: &mockRoundTripper{response: mockResponse}},
+		installationID: installationID,
+		appsTransport: &AppsTransport{
+			BaseURL:  "https://api.github.com",
+			Client:   &http.Client{Transport: &mockRoundTripper{response: mockResponse}},
+			tr:       &mockRoundTripper{response: mockResponse},
+			clientID: clientID,
+			signer:   &mockSigner{},
+		},
+		token: &accessToken{},
+	}
+
+	err := tr.refreshToken(context.Background())
+
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	httpErr, ok := err.(*HTTPError)
+	if !ok {
+		t.Fatalf("expected HTTPError, got %T", err)
+	}
+	if httpErr.Response.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected status code %d, got %d", http.StatusBadRequest, httpErr.Response.StatusCode)
+	}
+}
+
+func TestRefreshTokenRoundTripperReturnsError(t *testing.T) {
+	mockResponse := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body:       io.NopCloser(strings.NewReader(`{"message": "Bad Request"}`)),
+		Header:     make(http.Header),
+	}
+	rtErr := errors.New("round tripper error")
+
+	tr := &Transport{
+		BaseURL:        "https://api.github.com",
+		Client:         &http.Client{Transport: &mockRoundTripper{response: mockResponse}},
+		installationID: installationID,
+		appsTransport: &AppsTransport{
+			BaseURL:  "https://api.github.com",
+			Client:   &http.Client{Transport: &mockRoundTripper{response: mockResponse}},
+			tr:       &mockRoundTripper{response: mockResponse, err: rtErr},
+			clientID: clientID,
+			signer:   &mockSigner{},
+		},
+		token: &accessToken{},
+	}
+
+	err := tr.refreshToken(context.Background())
+
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	httpErr, ok := err.(*HTTPError)
+	if !ok {
+		t.Fatalf("expected HTTPError, got %T", err)
+	}
+	if httpErr.Response.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected status code %d, got %d", http.StatusBadRequest, httpErr.Response.StatusCode)
+	}
 }
 
 func TestExpiryAccessor(t *testing.T) {
