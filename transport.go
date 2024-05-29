@@ -123,7 +123,7 @@ func NewTransport(tr http.RoundTripper, clientID string, installationID int64, p
 //
 // The returned Transport's RoundTrip method is safe to be used concurrently.
 func NewTransportFromAppID(tr http.RoundTripper, appID, installationID int64, privateKey []byte) (*Transport, error) {
-	atr, err := NewAppsTransportWithAppId(tr, appID, privateKey)
+	atr, err := NewAppsTransportWithAppID(tr, appID, privateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (t *Transport) Token(ctx context.Context) (string, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.token.isExpired() {
-		// Token is not set or expired/nearly expired, so refresh
+		// Token is not set or (nearly) expired, so refresh
 		if err := t.refreshToken(ctx); err != nil {
 			return "", fmt.Errorf("could not refresh installation id %v's token: %w", t.installationID, err)
 		}

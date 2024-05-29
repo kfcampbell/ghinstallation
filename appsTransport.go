@@ -45,7 +45,7 @@ func NewAppsTransportKeyFromFileWithAppID(tr http.RoundTripper, appID int64, pri
 	if err != nil {
 		return nil, fmt.Errorf("could not read private key: %s", err)
 	}
-	return NewAppsTransportWithAppId(tr, appID, privateKey)
+	return NewAppsTransportWithAppID(tr, appID, privateKey)
 }
 
 // NewAppsTransport returns an AppsTransport using private key. The key is parsed
@@ -63,7 +63,7 @@ func NewAppsTransport(tr http.RoundTripper, clientID string, privateKey []byte) 
 	return NewAppsTransportFromPrivateKey(tr, clientID, key), nil
 }
 
-// NewAppsTransportWithAppId returns an AppsTransport using private key when given an appID instead of clientID.
+// NewAppsTransportWithAppID returns an AppsTransport using private key when given an appID instead of clientID.
 // Deprecated: use NewAppsTransport instead
 // The key is parsed
 // and if any errors occur the error is non-nil.
@@ -72,7 +72,7 @@ func NewAppsTransport(tr http.RoundTripper, clientID string, privateKey []byte) 
 // installations to ensure reuse of underlying TCP connections.
 //
 // The returned Transport's RoundTrip method is safe to be used concurrently.
-func NewAppsTransportWithAppId(tr http.RoundTripper, appID int64, privateKey []byte) (*AppsTransport, error) {
+func NewAppsTransportWithAppID(tr http.RoundTripper, appID int64, privateKey []byte) (*AppsTransport, error) {
 	key, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse private key: %s", err)
@@ -153,7 +153,6 @@ func (t *AppsTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	exp := iss.Add(10 * time.Minute)
 
 	// prefer clientID when given, fall back to appID when not
-	// TODO(kfcampbell): add test coverage for this behavior
 	issuer := t.clientID
 	if issuer == "" {
 		issuer = strconv.FormatInt(t.appID, 10)
