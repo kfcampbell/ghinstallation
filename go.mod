@@ -7,7 +7,7 @@ toolchain go1.22.3
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/go-cmp v0.6.0
-	github.com/octokit/go-sdk v0.0.13
+	github.com/octokit/go-sdk v0.0.15
 )
 
 require (
